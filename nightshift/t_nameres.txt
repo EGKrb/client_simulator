@@ -1,0 +1,5 @@
+mapload C:\projet\TARGET\My_dll.dll
+map mydll.map
+symbols FUN_180206000
+hexdump FUN_180206000 16
+inspect FUN_180206000

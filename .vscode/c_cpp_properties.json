@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Win64 - client_simulator",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/vcpkg_installed/x64-windows/include",
+                "${workspaceFolder}/build/_deps/luau-src/Compiler/include",
+                "${workspaceFolder}/build/_deps/luau-src/Ast/include",
+                "${workspaceFolder}/build/_deps/luau-src/Common/include",
+                "${workspaceFolder}/build/_deps/luau-src/VM/include",
+                "${workspaceFolder}/build/_deps/luau-src/Config/include",
+                "${workspaceFolder}/third_party/curl-8.22.0_1-win64-mingw/include"
+            ],
+            "defines": [
+                "_WIN32",
+                "WIN32_LEAN_AND_MEAN",
+                "NOMINMAX",
+                "_CRT_SECURE_NO_WARNINGS"
+            ],
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,28 @@
+# Build outputs
+build/
+obj/
+bin/
+vcpkg_installed/
+*.exe
+*.obj
+*.lib
+*.exp
+*.dll
+*.pdb
+*.ilk
+
+# Third-party binaries (bundled curl)
+third_party/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime artifacts
+logs/
+captured/
+*.log
+*.out
+*.der
+-Url

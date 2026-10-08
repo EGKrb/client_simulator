@@ -1,0 +1,7 @@
+load C:\Windows\System32\kernel32.dll
+peinfo
+sections
+call GetSystemTimePreciseAsFileTime
+symbols GetSystemT
+inspect GetTickCount
+version

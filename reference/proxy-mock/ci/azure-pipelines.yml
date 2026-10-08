@@ -1,0 +1,84 @@
+# azure-pipelines.yml — Pipeline QA : Simulation d'État de Possession
+# Prérequis : agent Windows (vscode windows) + dossier de règles du proxy MITM
+# accessible (share réseau ou même hôte que l'agent).
+#
+# Variables de pipeline attendues :
+#   LOG_PATH            -> chemin du log de session (source de capture)
+#   PRODUCT_ID          -> produit à isoler (ex. 1337)
+#   PROXY_RULES_DIR     -> dossier surveillé par le proxy (ex. D:\Proxy\rules)
+#   PROXY_SERVICE_NAME  -> service Windows du proxy (vide = rechargement différé)
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - qa/proxy-mock/**
+      - tests/sessions/*.log
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  - group: qa-proxy-mock
+
+steps:
+  - checkout: self
+
+  # Étape 0 (facultative) : profilage du trafic - aucun effet de bord
+  - pwsh: |
+      & ".\qa\proxy-mock\Generate-OwnershipMock.ps1" -Stage Analyze `
+        -SessionLogSearchPath "$(System.DefaultWorkingDirectory)\tests\sessions\*.log"
+    displayName: "0 - Profilage trafic (Mutations vs Queries)"
+    continueOnError: true
+
+  # Étape 1 : capture du payload (JSON valide + ownership_token)
+  - pwsh: |
+      & ".\qa\proxy-mock\Generate-OwnershipMock.ps1" -Stage Capture `
+        -LogPath "$(LOG_PATH)" `
+        -EndpointUrlFilter "ownership" `
+        -ProductId "$(PRODUCT_ID)" `
+        -StateFilter "owned" `
+        -CapturedJson "$(Agent.TempDirectory)\ownership_sample.json"
+    displayName: "1 - Capture du payload d'état"
+    env:
+      LOG_PATH: $(LOG_PATH)
+      PRODUCT_ID: $(PRODUCT_ID)
+
+  # Étape 2 : génération des règles (regex isolation produit)
+  - pwsh: |
+      & ".\qa\proxy-mock\Generate-OwnershipMock.ps1" -Stage Configure `
+        -CapturedJson "$(Agent.TempDirectory)\ownership_sample.json" `
+        -ProductId "$(PRODUCT_ID)" `
+        -RulesFile "$(System.DefaultWorkingDirectory)\out\rules.ini" `
+        -ResponseOutDir "$(System.DefaultWorkingDirectory)\out\responses"
+    displayName: "2 - Génération du rules.ini"
+
+  # Étape 3 : publication des artefacts pour audit / re-déploiement manuel
+  - task: PublishBuildArtifacts@1
+    displayName: "3 - Publier artefacts (rules.ini + payload)"
+    inputs:
+      PathtoPublish: "$(System.DefaultWorkingDirectory)\out"
+      ArtifactName: "proxy-mock-rules"
+
+  # Étape 4 : déploiement sur le moteur de règles du proxy
+  - pwsh: |
+      & ".\qa\proxy-mock\Generate-OwnershipMock.ps1" -Stage Deploy `
+        -RulesFile "$(System.DefaultWorkingDirectory)\out\rules.ini" `
+        -ResponseOutDir "$(System.DefaultWorkingDirectory)\out\responses" `
+        -ProxyRulesDir "$(PROXY_RULES_DIR)" `
+        -ProxyServiceName "$(PROXY_SERVICE_NAME)"
+    displayName: "4 - Déploiement des règles sur le proxy"
+
+  # Étape 5 : smoke test E2E (état possédé stable)
+  - pwsh: |
+      $uri = "https://api.example.com/v1/ownership/status?product_id=$(PRODUCT_ID)"
+      for ($i = 0; $i -lt 10; $i++) {
+        $r = Invoke-WebRequest -Uri $uri -Method Get -UseBasicParsing
+        $json = $r.Content | ConvertFrom-Json
+        if ($json.state -ne "owned") { Write-Error "État inattendu : $($json.state)"; exit 1 }
+      }
+      Write-Host "Smoke test OK : 10/10 réponses 'owned'"
+    displayName: "5 - Smoke test (10 itérations)"
+    condition: succeeded()

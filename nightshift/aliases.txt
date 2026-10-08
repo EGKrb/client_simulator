@@ -1,0 +1,7 @@
+# NightShift Alias Configuration
+# Format: alias_name|username|password|company
+# Lines starting with # are comments
+#
+# Examples:
+# admin|sa|password123|TWO
+# ulogin2|ulrika|pass456|COMPANY1
